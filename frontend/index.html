@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="de" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Baluchistan Blog</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      window.__clerk_publishable_key =
+        "pk_test_cXVhbGl0eS1ha2l0YS0xNS5jbGVyay5hY2NvdW50cy5kZXYk";
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
+
+    <style>
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+      .comment-card {
+        transition: transform 0.2s ease;
+      }
+      .comment-card:hover {
+        transform: translateX(4px);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-100 text-base-content">
+    <!-- NAVBAR -->
+    <nav class="navbar bg-base-200 shadow-lg sticky top-0 z-50">
+      <div class="navbar-start">
+        <a
+          class="btn btn-ghost text-xl font-bold text-primary cursor-pointer"
+          onclick="showPage('home')"
+        >
+          🌍 Raaji Baluch's Blog
+        </a>
+        <!-- Dark/Light Toggle -->
+        <button onclick="toggleTheme()" class="btn btn-ghost btn-circle">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
+      <div class="navbar-center hidden md:flex gap-2">
+        <a class="btn btn-ghost btn-sm" onclick="showPage('home')"
+          >🏠 Startseite</a
+        >
+        <a class="btn btn-ghost btn-sm" onclick="showPage('music')">🎵 Musik</a>
+        <a class="btn btn-ghost btn-sm" onclick="showPage('video')"
+          >🎬 Videos</a
+        >
+        <a
+          id="admin-nav-btn"
+          class="hidden btn btn-ghost btn-sm"
+          onclick="showPage('admin')"
+          >✏️ Post erstellen</a
+        >
+      </div>
+      <div class="navbar-end gap-2">
+        <div id="auth-buttons" class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" onclick="openSignIn()">
+            Anmelden
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openSignUp()">
+            Registrieren
+          </button>
+        </div>
+        <div id="user-info" class="hidden items-center gap-3">
+          <span id="user-name" class="text-sm text-base-content/70"></span>
+          <button class="btn btn-ghost btn-sm" onclick="signOut()">
+            Abmelden
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- TOAST -->
+    <div id="toast-container" class="toast toast-top toast-end z-[100]"></div>
+
+    <!-- SEITE: STARTSEITE -->
+    <div id="page-home" class="page active">
+      <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <div class="hero bg-base-200 rounded-2xl mb-10 py-12 px-6">
+          <div class="hero-content text-center">
+            <div>
+              <h1 class="text-5xl font-bold text-primary mb-4">
+                🌍 Baluchistan
+              </h1>
+              <p class="text-base-content/70 text-lg max-w-xl mx-auto">
+                Ein Volk, eine Kultur, eine Identität – durch Gewalt auf drei
+                Staaten aufgeteilt: Pakistan, Iran und Afghanistan.
+              </p>
+              <div class="flex gap-3 justify-center mt-6 flex-wrap">
+                <button class="btn btn-primary" onclick="showPage('music')">
+                  🎵 Musik hören
+                </button>
+                <button class="btn btn-outline" onclick="showPage('video')">
+                  🎬 Videos ansehen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="login-hint"
+          class="hidden alert mb-6"
+          style="background-color: #1e40af; color: white"
+        >
+          <span
+            >👉
+            <a class="link link-primary cursor-pointer" onclick="openSignIn()"
+              >Melde dich an</a
+            >
+            um Kommentare zu schreiben!</span
+          >
+        </div>
+
+        <h2 class="text-2xl font-bold mb-6">📝 Alle Beiträge</h2>
+        <div id="posts-list" class="space-y-6">
+          <div class="flex justify-center py-10">
+            <span
+              class="loading loading-spinner loading-lg text-primary"
+            ></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEITE: DETAIL -->
+    <div id="page-detail" class="page">
+      <div class="container mx-auto px-4 py-10 max-w-3xl">
+        <button class="btn btn-ghost btn-sm mb-6" onclick="showPage('home')">
+          ← Zurück zur Übersicht
+        </button>
+
+        <article class="card bg-base-200 shadow-xl mb-8">
+          <div class="card-body">
+            <div id="detail-loading" class="flex justify-center py-10">
+              <span
+                class="loading loading-spinner loading-lg text-primary"
+              ></span>
+            </div>
+            <div id="detail-content" class="hidden">
+              <div class="badge badge-primary mb-2">Artikel</div>
+              <h1
+                id="detail-title"
+                class="card-title text-3xl font-bold mb-4"
+              ></h1>
+              <p
+                id="detail-text"
+                class="text-base-content/80 leading-relaxed text-lg"
+              ></p>
+              <div class="mt-4 text-sm text-base-content/50">
+                ✍️ <span id="detail-author"></span> ·
+                <span id="detail-date"></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <section class="mb-8">
+          <h2 class="text-xl font-bold mb-4">💬 Kommentar schreiben</h2>
+          <div id="comment-login-required" class="hidden alert alert-warning">
+            <span
+              >⚠️ Du musst
+              <a
+                class="link link-warning cursor-pointer font-bold"
+                onclick="openSignIn()"
+                >angemeldet</a
+              >
+              sein um Kommentare zu schreiben.</span
+            >
+          </div>
+          <div
+            id="comment-form-container"
+            class="hidden card bg-base-200 shadow p-5 rounded-xl"
+          >
+            <div class="form-control mb-4">
+              <label class="label">
+                <span class="label-text font-medium">Dein Kommentar</span>
+                <span class="label-text-alt"
+                  ><span id="char-count">0</span>/1000</span
+                >
+              </label>
+              <textarea
+                id="comment-text"
+                class="textarea textarea-bordered h-28 resize-none"
+                placeholder="Schreibe deinen Kommentar..."
+                maxlength="1000"
+              ></textarea>
+              <div id="comment-error" class="hidden label">
+                <span
+                  class="label-text-alt text-error"
+                  id="comment-error-msg"
+                ></span>
+              </div>
+            </div>
+            <button
+              id="submit-comment-btn"
+              class="btn btn-primary"
+              onclick="submitComment()"
+            >
+              Kommentar absenden
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-bold mb-4">
+            Kommentare
+            <span id="comment-count" class="badge badge-neutral ml-2">0</span>
+          </h2>
+          <div id="comments-list" class="space-y-4">
+            <div class="flex justify-center py-6">
+              <span
+                class="loading loading-spinner loading-md text-primary"
+              ></span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SEITE: MUSIK -->
+    <div id="page-music" class="page">
+      <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <h1 class="text-4xl font-bold text-primary mb-2">
+          🎵 Baluchische Musik
+        </h1>
+        <p class="text-base-content/60 mb-8">
+          Traditionelle und moderne Musik aus Baluchistan
+        </p>
+        <div class="grid gap-6">
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <div class="flex items-center gap-4 mb-3">
+                <div class="text-4xl">🎸</div>
+                <div>
+                  <h3 class="card-title">Traditionelle Baluchi Musik</h3>
+                  <p class="text-base-content/60 text-sm">
+                    Klassische Baluchi Lieder – Sorud & Lewa Tanz
+                  </p>
+                </div>
+              </div>
+              <iframe
+                width="100%"
+                height="80"
+                src="https://www.youtube.com/embed/Gmz8zzyS7Ng"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <div class="flex items-center gap-4 mb-3">
+                <div class="text-4xl">🎶</div>
+                <div>
+                  <h3 class="card-title">Baluchi Lied 2</h3>
+                  <p class="text-base-content/60 text-sm">
+                    Wunderschöne baluchische Musik
+                  </p>
+                </div>
+              </div>
+              <iframe
+                width="100%"
+                height="80"
+                src="https://www.youtube.com/embed/ekTqLE3kfU8"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <div class="flex items-center gap-4 mb-3">
+                <div class="text-4xl">🥁</div>
+                <div>
+                  <h3 class="card-title">Baluchi Lied 3</h3>
+                  <p class="text-base-content/60 text-sm">
+                    Volksmusik aus Baluchistan
+                  </p>
+                </div>
+              </div>
+              <iframe
+                width="100%"
+                height="80"
+                src="https://www.youtube.com/embed/NgOrL8MvC7k"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <div class="flex items-center gap-4 mb-3">
+                <div class="text-4xl">🎵</div>
+                <div>
+                  <h3 class="card-title">Baluchi Lied 4</h3>
+                  <p class="text-base-content/60 text-sm">
+                    Traditionelle Klänge Baluchiستانs
+                  </p>
+                </div>
+              </div>
+              <iframe
+                width="100%"
+                height="80"
+                src="https://www.youtube.com/embed/N8Pbqk3_Yfo"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <div class="flex items-center gap-4 mb-3">
+                <div class="text-4xl">🎼</div>
+                <div>
+                  <h3 class="card-title">Baluchi Lied 5</h3>
+                  <p class="text-base-content/60 text-sm">
+                    Das Herz der baluchischen Musik
+                  </p>
+                </div>
+              </div>
+              <iframe
+                width="100%"
+                height="80"
+                src="https://www.youtube.com/embed/-GnH7v42I1M"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEITE: VIDEOS -->
+    <div id="page-video" class="page">
+      <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <h1 class="text-4xl font-bold text-primary mb-2">
+          🎬 Baluchistan Videos
+        </h1>
+        <p class="text-base-content/60 mb-8">
+          Dokumentationen und Videos über Baluchistan
+        </p>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 1</h3>
+              <p class="text-base-content/60 text-sm mb-3">
+                Traditionelle baluchische Aufführung
+              </p>
+              <iframe
+                width="100%"
+                height="200"
+                src="https://www.youtube.com/embed/ekTqLE3kfU8"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 2</h3>
+              <p class="text-base-content/60 text-sm mb-3">
+                Volkslieder aus der Region
+              </p>
+              <iframe
+                width="100%"
+                height="200"
+                src="https://www.youtube.com/embed/NgOrL8MvC7k"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 3</h3>
+              <p class="text-base-content/60 text-sm mb-3">
+                Wunderschöne Klänge Baluchiستانs
+              </p>
+              <iframe
+                width="100%"
+                height="200"
+                src="https://www.youtube.com/embed/N8Pbqk3_Yfo"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="card bg-base-200 shadow-xl">
+            <div class="card-body">
+              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 4</h3>
+              <p class="text-base-content/60 text-sm mb-3">
+                Das Herz der baluchischen Kultur
+              </p>
+              <iframe
+                width="100%"
+                height="200"
+                src="https://www.youtube.com/embed/-GnH7v42I1M"
+                frameborder="0"
+                allowfullscreen
+                class="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEITE: POST ERSTELLEN -->
+    <div id="page-admin" class="page">
+      <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <!-- Hero -->
+        <div
+          class="rounded-2xl mb-10 py-16 px-6 relative overflow-hidden"
+          style="min-height: 200px"
+        >
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background-image: url(&quot;images/Balochistan-flag.webp&quot;);
+              background-size: cover;
+              background-position: center;
+              opacity: 0.25;
+              border-radius: 1rem;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background: rgba(0, 0, 0, 0.55);
+              border-radius: 1rem;
+            "
+          ></div>
+          <div class="relative z-10 text-center">
+            <h1 class="text-4xl font-bold text-white mb-2">
+              ✏️ Neuen Beitrag erstellen
+            </h1>
+            <p class="text-white/70">Teile dein Wissen über Baluchistan</p>
+          </div>
+        </div>
+
+        <!-- Formular -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <div class="form-control mb-4">
+              <label class="label">
+                <span class="label-text font-medium">Titel</span>
+              </label>
+              <input
+                id="post-title"
+                type="text"
+                class="input input-bordered"
+                placeholder="Titel des Beitrags..."
+                maxlength="200"
+              />
+              <div id="post-title-error" class="hidden label">
+                <span
+                  class="label-text-alt text-error"
+                  id="post-title-error-msg"
+                ></span>
+              </div>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="label">
+                <span class="label-text font-medium">Inhalt</span>
+              </label>
+              <textarea
+                id="post-content"
+                class="textarea textarea-bordered h-40 resize-none"
+                placeholder="Schreibe den Inhalt..."
+              ></textarea>
+              <div id="post-content-error" class="hidden label">
+                <span
+                  class="label-text-alt text-error"
+                  id="post-content-error-msg"
+                ></span>
+              </div>
+            </div>
+
+            <div id="post-success" class="hidden alert alert-success mb-4">
+              <span
+                >✅ Beitrag erfolgreich erstellt! Du wirst
+                weitergeleitet...</span
+              >
+            </div>
+
+            <div class="flex gap-3">
+              <button class="btn btn-ghost" onclick="showPage('home')">
+                ← Abbrechen
+              </button>
+              <button
+                id="create-post-btn"
+                class="btn btn-primary flex-1"
+                onclick="createPost()"
+              >
+                🚀 Beitrag veröffentlichen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLERK MODAL -->
+    <div
+      id="clerk-modal-overlay"
+      class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4"
+      onclick="closeClerkModal(event)"
+    >
+      <div
+        class="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md relative"
+        onclick="event.stopPropagation()"
+      >
+        <button
+          class="btn btn-sm btn-circle btn-ghost absolute right-3 top-3 z-10"
+          onclick="closeClerkModal()"
+        >
+          ✕
+        </button>
+        <div id="clerk-mount-point" class="p-2"></div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

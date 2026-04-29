@@ -1,22 +1,14 @@
 <!doctype html>
-<html lang="de" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Baluchistan Blog</title>
-
+    <title>Raaji Baluch</title>
     <link
       href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css"
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <script>
-      window.__clerk_publishable_key =
-        "pk_test_cXVhbGl0eS1ha2l0YS0xNS5jbGVyay5hY2NvdW50cy5kZXYk";
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
-
     <style>
       .page {
         display: none;
@@ -40,18 +32,14 @@
           class="btn btn-ghost text-xl font-bold text-primary cursor-pointer"
           onclick="showPage('home')"
         >
-          🌍 Raaji Baluch's Blog
+          🌍 Raaji Baluch
         </a>
-        <!-- Dark/Light Toggle -->
-        <button onclick="toggleTheme()" class="btn btn-ghost btn-circle">
-          <span id="theme-icon">🌙</span>
-        </button>
       </div>
       <div class="navbar-center hidden md:flex gap-2">
         <a class="btn btn-ghost btn-sm" onclick="showPage('home')"
-          >🏠 Startseite</a
+          >🏠 Homepage</a
         >
-        <a class="btn btn-ghost btn-sm" onclick="showPage('music')">🎵 Musik</a>
+        <a class="btn btn-ghost btn-sm" onclick="showPage('music')">🎵 Music</a>
         <a class="btn btn-ghost btn-sm" onclick="showPage('video')"
           >🎬 Videos</a
         >
@@ -59,22 +47,26 @@
           id="admin-nav-btn"
           class="hidden btn btn-ghost btn-sm"
           onclick="showPage('admin')"
-          >✏️ Post erstellen</a
+          >✏️ Creat a Post</a
         >
       </div>
       <div class="navbar-end gap-2">
+        <button onclick="toggleTheme()" class="btn btn-ghost btn-circle">
+          <span id="theme-icon">🌙</span>
+        </button>
         <div id="auth-buttons" class="flex gap-2">
           <button class="btn btn-ghost btn-sm" onclick="openSignIn()">
-            Anmelden
+            Login
           </button>
           <button class="btn btn-primary btn-sm" onclick="openSignUp()">
-            Registrieren
+            Signup
           </button>
         </div>
         <div id="user-info" class="hidden items-center gap-3">
           <span id="user-name" class="text-sm text-base-content/70"></span>
+
           <button class="btn btn-ghost btn-sm" onclick="signOut()">
-            Abmelden
+            Logout
           </button>
         </div>
       </div>
@@ -86,43 +78,61 @@
     <!-- SEITE: STARTSEITE -->
     <div id="page-home" class="page active">
       <div class="container mx-auto px-4 py-10 max-w-4xl">
-        <div class="hero bg-base-200 rounded-2xl mb-10 py-12 px-6">
-          <div class="hero-content text-center">
-            <div>
-              <h1 class="text-5xl font-bold text-primary mb-4">
-                🌍 Baluchistan
-              </h1>
-              <p class="text-base-content/70 text-lg max-w-xl mx-auto">
-                Ein Volk, eine Kultur, eine Identität – durch Gewalt auf drei
-                Staaten aufgeteilt: Pakistan, Iran und Afghanistan.
-              </p>
-              <div class="flex gap-3 justify-center mt-6 flex-wrap">
-                <button class="btn btn-primary" onclick="showPage('music')">
-                  🎵 Musik hören
-                </button>
-                <button class="btn btn-outline" onclick="showPage('video')">
-                  🎬 Videos ansehen
-                </button>
-              </div>
+        <!-- Hero mit Flagge -->
+        <div
+          class="rounded-2xl mb-10 py-16 px-6 relative overflow-hidden"
+          style="min-height: 320px"
+        >
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background-image: url(images/images\ \(1\).jpeg);
+              background-size: cover;
+              background-position: center;
+              opacity: 0.25;
+              border-radius: 1rem;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background: rgba(0, 0, 0, 0.55);
+              border-radius: 1rem;
+            "
+          ></div>
+          <div class="relative z-10 text-center">
+            <h1 class="text-5xl font-bold text-white mb-4">🌍 Baluchistan</h1>
+            <p class="text-white/80 text-lg max-w-xl mx-auto">
+              One people, one culture, one identity – forcibly divided into
+              three states.
+            </p>
+            <div class="flex gap-3 justify-center mt-6 flex-wrap">
+              <button class="btn btn-primary" onclick="showPage('music')">
+                🎵 Listen to Music
+              </button>
+              <button
+                class="btn btn-outline text-white border-white hover:bg-white hover:text-black"
+                onclick="showPage('video')"
+              >
+                🎬 Watch Videos
+              </button>
             </div>
           </div>
         </div>
 
-        <div
-          id="login-hint"
-          class="hidden alert mb-6"
-          style="background-color: #1e40af; color: white"
-        >
+        <div id="login-hint" class="hidden alert alert-info mb-6">
           <span
             >👉
             <a class="link link-primary cursor-pointer" onclick="openSignIn()"
-              >Melde dich an</a
-            >
-            um Kommentare zu schreiben!</span
+              >SignIn
+            </a>
+            to Write comments!</span
           >
         </div>
 
-        <h2 class="text-2xl font-bold mb-6">📝 Alle Beiträge</h2>
+        <h2 class="text-2xl font-bold mb-6">📝 All Posts</h2>
         <div id="posts-list" class="space-y-6">
           <div class="flex justify-center py-10">
             <span
@@ -137,9 +147,8 @@
     <div id="page-detail" class="page">
       <div class="container mx-auto px-4 py-10 max-w-3xl">
         <button class="btn btn-ghost btn-sm mb-6" onclick="showPage('home')">
-          ← Zurück zur Übersicht
+          ← Back to Overview
         </button>
-
         <article class="card bg-base-200 shadow-xl mb-8">
           <div class="card-body">
             <div id="detail-loading" class="flex justify-center py-10">
@@ -148,7 +157,7 @@
               ></span>
             </div>
             <div id="detail-content" class="hidden">
-              <div class="badge badge-primary mb-2">Artikel</div>
+              <div class="badge badge-primary mb-2">Article</div>
               <h1
                 id="detail-title"
                 class="card-title text-3xl font-bold mb-4"
@@ -166,16 +175,16 @@
         </article>
 
         <section class="mb-8">
-          <h2 class="text-xl font-bold mb-4">💬 Kommentar schreiben</h2>
+          <h2 class="text-xl font-bold mb-4">💬 Write a Comment</h2>
           <div id="comment-login-required" class="hidden alert alert-warning">
             <span
-              >⚠️ Du musst
+              >⚠️ You must be
               <a
                 class="link link-warning cursor-pointer font-bold"
                 onclick="openSignIn()"
-                >angemeldet</a
+                >Signed in</a
               >
-              sein um Kommentare zu schreiben.</span
+              to write a comment.</span
             >
           </div>
           <div
@@ -184,7 +193,7 @@
           >
             <div class="form-control mb-4">
               <label class="label">
-                <span class="label-text font-medium">Dein Kommentar</span>
+                <span class="label-text font-medium">Your Comments</span>
                 <span class="label-text-alt"
                   ><span id="char-count">0</span>/1000</span
                 >
@@ -192,7 +201,7 @@
               <textarea
                 id="comment-text"
                 class="textarea textarea-bordered h-28 resize-none"
-                placeholder="Schreibe deinen Kommentar..."
+                placeholder="Write Your Comment..."
                 maxlength="1000"
               ></textarea>
               <div id="comment-error" class="hidden label">
@@ -207,23 +216,17 @@
               class="btn btn-primary"
               onclick="submitComment()"
             >
-              Kommentar absenden
+              Send Comment
             </button>
           </div>
         </section>
 
         <section>
           <h2 class="text-xl font-bold mb-4">
-            Kommentare
+            Comments
             <span id="comment-count" class="badge badge-neutral ml-2">0</span>
           </h2>
-          <div id="comments-list" class="space-y-4">
-            <div class="flex justify-center py-6">
-              <span
-                class="loading loading-spinner loading-md text-primary"
-              ></span>
-            </div>
-          </div>
+          <div id="comments-list" class="space-y-4"></div>
         </section>
       </div>
     </div>
@@ -231,11 +234,9 @@
     <!-- SEITE: MUSIK -->
     <div id="page-music" class="page">
       <div class="container mx-auto px-4 py-10 max-w-4xl">
-        <h1 class="text-4xl font-bold text-primary mb-2">
-          🎵 Baluchische Musik
-        </h1>
+        <h1 class="text-4xl font-bold text-primary mb-2">🎵 Baluchi Music</h1>
         <p class="text-base-content/60 mb-8">
-          Traditionelle und moderne Musik aus Baluchistan
+          Traditional and Modern Musics from Baluchistan
         </p>
         <div class="grid gap-6">
           <div class="card bg-base-200 shadow-xl">
@@ -243,9 +244,9 @@
               <div class="flex items-center gap-4 mb-3">
                 <div class="text-4xl">🎸</div>
                 <div>
-                  <h3 class="card-title">Traditionelle Baluchi Musik</h3>
+                  <h3 class="card-title">Baluchi Traditional Music</h3>
                   <p class="text-base-content/60 text-sm">
-                    Klassische Baluchi Lieder – Sorud & Lewa Tanz
+                    Classical Balochi songs – Sorud & Lewa dance
                   </p>
                 </div>
               </div>
@@ -259,15 +260,14 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
               <div class="flex items-center gap-4 mb-3">
                 <div class="text-4xl">🎶</div>
                 <div>
-                  <h3 class="card-title">Baluchi Lied 2</h3>
+                  <h3 class="card-title">Baluchi Song 2</h3>
                   <p class="text-base-content/60 text-sm">
-                    Wunderschöne baluchische Musik
+                    Beautiful Baluchi music
                   </p>
                 </div>
               </div>
@@ -281,15 +281,14 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
               <div class="flex items-center gap-4 mb-3">
                 <div class="text-4xl">🥁</div>
                 <div>
-                  <h3 class="card-title">Baluchi Lied 3</h3>
+                  <h3 class="card-title">Baluchi Song 3</h3>
                   <p class="text-base-content/60 text-sm">
-                    Volksmusik aus Baluchistan
+                    Folk music from Balochistan
                   </p>
                 </div>
               </div>
@@ -303,15 +302,14 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
               <div class="flex items-center gap-4 mb-3">
                 <div class="text-4xl">🎵</div>
                 <div>
-                  <h3 class="card-title">Baluchi Lied 4</h3>
+                  <h3 class="card-title">Baluchi Song 4</h3>
                   <p class="text-base-content/60 text-sm">
-                    Traditionelle Klänge Baluchiستانs
+                    Traditional sounds of Balochistan
                   </p>
                 </div>
               </div>
@@ -325,15 +323,14 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
               <div class="flex items-center gap-4 mb-3">
                 <div class="text-4xl">🎼</div>
                 <div>
-                  <h3 class="card-title">Baluchi Lied 5</h3>
+                  <h3 class="card-title">Baluchi Song 5</h3>
                   <p class="text-base-content/60 text-sm">
-                    Das Herz der baluchischen Musik
+                    the Heart of Baluchi Music
                   </p>
                 </div>
               </div>
@@ -358,14 +355,14 @@
           🎬 Baluchistan Videos
         </h1>
         <p class="text-base-content/60 mb-8">
-          Dokumentationen und Videos über Baluchistan
+          Documentaries and videos about Baluchistan
         </p>
         <div class="grid md:grid-cols-2 gap-6">
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 1</h3>
+              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 1</h3>
               <p class="text-base-content/60 text-sm mb-3">
-                Traditionelle baluchische Aufführung
+                Traditional Baluch performance
               </p>
               <iframe
                 width="100%"
@@ -377,12 +374,11 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 2</h3>
+              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 2</h3>
               <p class="text-base-content/60 text-sm mb-3">
-                Volkslieder aus der Region
+                Folk songs from the region
               </p>
               <iframe
                 width="100%"
@@ -394,12 +390,11 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 3</h3>
+              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 3</h3>
               <p class="text-base-content/60 text-sm mb-3">
-                Wunderschöne Klänge Baluchiستانs
+                Beautiful sounds of Baluchistan
               </p>
               <iframe
                 width="100%"
@@ -411,12 +406,11 @@
               ></iframe>
             </div>
           </div>
-
           <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musikvideo 4</h3>
+              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 4</h3>
               <p class="text-base-content/60 text-sm mb-3">
-                Das Herz der baluchischen Kultur
+                The heart of Baluch culture
               </p>
               <iframe
                 width="100%"
@@ -435,7 +429,6 @@
     <!-- SEITE: POST ERSTELLEN -->
     <div id="page-admin" class="page">
       <div class="container mx-auto px-4 py-10 max-w-4xl">
-        <!-- Hero -->
         <div
           class="rounded-2xl mb-10 py-16 px-6 relative overflow-hidden"
           style="min-height: 200px"
@@ -444,7 +437,7 @@
             style="
               position: absolute;
               inset: 0;
-              background-image: url(&quot;images/Balochistan-flag.webp&quot;);
+              background-image: url(images/Download.jpeg);
               background-size: cover;
               background-position: center;
               opacity: 0.25;
@@ -461,19 +454,17 @@
           ></div>
           <div class="relative z-10 text-center">
             <h1 class="text-4xl font-bold text-white mb-2">
-              ✏️ Neuen Beitrag erstellen
+              ✏️ Creat a new Post
             </h1>
-            <p class="text-white/70">Teile dein Wissen über Baluchistan</p>
+            <p class="text-white/70">Share your knowledge about Baluchistan.</p>
           </div>
         </div>
-
-        <!-- Formular -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
             <div class="form-control mb-4">
-              <label class="label">
-                <span class="label-text font-medium">Titel</span>
-              </label>
+              <label class="label"
+                ><span class="label-text font-medium">Titel</span></label
+              >
               <input
                 id="post-title"
                 type="text"
@@ -488,15 +479,14 @@
                 ></span>
               </div>
             </div>
-
             <div class="form-control mb-4">
-              <label class="label">
-                <span class="label-text font-medium">Inhalt</span>
-              </label>
+              <label class="label"
+                ><span class="label-text font-medium">Content</span></label
+              >
               <textarea
                 id="post-content"
                 class="textarea textarea-bordered h-40 resize-none"
-                placeholder="Schreibe den Inhalt..."
+                placeholder="Write the Content..."
               ></textarea>
               <div id="post-content-error" class="hidden label">
                 <span
@@ -505,24 +495,19 @@
                 ></span>
               </div>
             </div>
-
             <div id="post-success" class="hidden alert alert-success mb-4">
-              <span
-                >✅ Beitrag erfolgreich erstellt! Du wirst
-                weitergeleitet...</span
-              >
+              <span>✅ Post successfully created!</span>
             </div>
-
             <div class="flex gap-3">
               <button class="btn btn-ghost" onclick="showPage('home')">
-                ← Abbrechen
+                ← Close
               </button>
               <button
                 id="create-post-btn"
                 class="btn btn-primary flex-1"
                 onclick="createPost()"
               >
-                🚀 Beitrag veröffentlichen
+                🚀 Publish post
               </button>
             </div>
           </div>
@@ -530,26 +515,6 @@
       </div>
     </div>
 
-    <!-- CLERK MODAL -->
-    <div
-      id="clerk-modal-overlay"
-      class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4"
-      onclick="closeClerkModal(event)"
-    >
-      <div
-        class="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md relative"
-        onclick="event.stopPropagation()"
-      >
-        <button
-          class="btn btn-sm btn-circle btn-ghost absolute right-3 top-3 z-10"
-          onclick="closeClerkModal()"
-        >
-          ✕
-        </button>
-        <div id="clerk-mount-point" class="p-2"></div>
-      </div>
-    </div>
-
-    <script src="script.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

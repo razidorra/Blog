@@ -23,43 +23,52 @@ export const getPostById = async (req, res) => {
   }
 };
 
-// Neuen Blogbeitrag erstellen
+// Neuen Blogbeitrag erstellen – nur Admin!
 export const createPost = async (req, res) => {
   try {
+    const { userId } = getAuth(req);
+    if (userId !== process.env.ADMIN_USER_ID) {
+      return res.status(403).json({
+        error: "Keine Berechtigung – nur Admin darf Posts erstellen!",
+      });
+    }
+
     const title = req.body.title?.trim();
     const content = req.body.content?.trim();
 
-    if (!title) {
+    if (!title)
       return res.status(400).json({ error: "Titel ist erforderlich" });
-    }
-    if (!content) {
+    if (!content)
       return res.status(400).json({ error: "Inhalt ist erforderlich" });
-    }
-    if (title.length < 3) {
+    if (title.length < 3)
       return res
         .status(400)
         .json({ error: "Titel muss mindestens 3 Zeichen lang sein" });
-    }
-    if (content.length < 10) {
+    if (content.length < 10)
       return res
         .status(400)
         .json({ error: "Inhalt muss mindestens 10 Zeichen lang sein" });
-    }
 
-    const post = await Post.create({ title, content, author: "Admin" });
+    const post = await Post.create({ title, content, author: "Admin", userId });
     res.status(201).json(post);
   } catch (error) {
     res.status(500).json({ error: "Fehler beim Erstellen des Beitrags" });
   }
 };
 
-// Post löschen
+// Post löschen – nur Admin!
 export const deletePost = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ error: "Beitrag nicht gefunden" });
+    const { userId } = getAuth(req);
+    if (userId !== process.env.ADMIN_USER_ID) {
+      return res
+        .status(403)
+        .json({ error: "Keine Berechtigung – nur Admin darf Posts löschen!" });
     }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Beitrag nicht gefunden" });
+
     await post.deleteOne();
     res.json({ message: "Beitrag gelöscht" });
   } catch (error) {
@@ -67,18 +76,23 @@ export const deletePost = async (req, res) => {
   }
 };
 
-// Post bearbeiten
+// Post bearbeiten – nur Admin!
 export const updatePost = async (req, res) => {
   try {
+    const { userId } = getAuth(req);
+    if (userId !== process.env.ADMIN_USER_ID) {
+      return res.status(403).json({
+        error: "Keine Berechtigung – nur Admin darf Posts bearbeiten!",
+      });
+    }
+
     const title = req.body.title?.trim();
     const content = req.body.content?.trim();
 
-    if (!title) {
+    if (!title)
       return res.status(400).json({ error: "Titel ist erforderlich" });
-    }
-    if (!content) {
+    if (!content)
       return res.status(400).json({ error: "Inhalt ist erforderlich" });
-    }
 
     const post = await Post.findByIdAndUpdate(
       req.params.id,
@@ -86,10 +100,7 @@ export const updatePost = async (req, res) => {
       { new: true },
     );
 
-    if (!post) {
-      return res.status(404).json({ error: "Beitrag nicht gefunden" });
-    }
-
+    if (!post) return res.status(404).json({ error: "Beitrag nicht gefunden" });
     res.json(post);
   } catch (error) {
     res.status(400).json({ error: "Fehler beim Bearbeiten" });

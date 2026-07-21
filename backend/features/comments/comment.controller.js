@@ -1,81 +1,91 @@
-import Comment from "./comment.model.js";
-import Post from "../posts/post.model.js";
-import { getUserId } from "../../middleware/auth.middleware.js";
+import { randomUUID } from "node:crypto";
+import { readData, updateData } from "../../data/store.js";
+import { getIdentity } from "../../utils/identity.js";
+import { asTrimmedString } from "../../utils/validation.js";
 
-// Alle Kommentare eines Beitrags abrufen
 export const getCommentsByPost = async (req, res) => {
   try {
-    const comments = await Comment.find({ postId: req.params.id }).sort({
-      createdAt: -1,
-    });
-    res.json(comments);
+    const { comments } = await readData();
+    const postComments = comments
+      .filter(({ postId }) => postId === req.params.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(postComments);
   } catch (error) {
-    res.status(400).json({ error: "Fehler beim Laden der Kommentare" });
+    console.error("Error reading comments:", error);
+    res.status(500).json({ error: "Failed to load comments" });
   }
 };
 
-// Neuen Kommentar erstellen
 export const createComment = async (req, res) => {
   try {
-    // Beitrag existiert?
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ error: "Beitrag nicht gefunden" });
-    }
+    const text = asTrimmedString(req.body.text);
+    const { userId, displayName } = getIdentity(req);
 
-    // Eingaben holen
-    const text = req.body.text?.trim();
-    const username = req.body.username?.trim() || "Anonym";
-
-    // Backend-Validierung
     if (!text) {
-      return res.status(400).json({ error: "Kommentar darf nicht leer sein" });
+      return res.status(400).json({ error: "Comment cannot be empty" });
     }
     if (text.length > 1000) {
       return res
         .status(400)
-        .json({ error: "Kommentar darf maximal 1000 Zeichen lang sein" });
+        .json({ error: "Comment cannot exceed 1,000 characters" });
     }
 
-    // Benutzer-ID aus Clerk Token holen
-    const userId = getUserId(req);
-
-    // Kommentar speichern
-    const comment = await Comment.create({
+    const now = new Date().toISOString();
+    const comment = {
+      _id: randomUUID(),
       postId: req.params.id,
       userId,
-      username,
+      username: displayName,
       text,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const postExists = await updateData((data) => {
+      if (!data.posts.some(({ _id }) => _id === req.params.id)) return false;
+      data.comments.push(comment);
+      return true;
     });
+
+    if (!postExists) {
+      return res.status(404).json({ error: "Post not found" });
+    }
 
     res.status(201).json(comment);
   } catch (error) {
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map((e) => e.message);
-      return res.status(400).json({ error: messages.join(", ") });
-    }
-    res.status(500).json({ error: "Fehler beim Speichern des Kommentars" });
+    console.error("Error saving comment:", error);
+    res.status(500).json({ error: "Failed to save comment" });
   }
 };
 
-// Kommentar löschen
 export const deleteComment = async (req, res) => {
   try {
-    const userId = getUserId(req);
-    const comment = await Comment.findById(req.params.id);
+    const { userId, isAdmin } = getIdentity(req);
 
-    if (!comment) {
-      return res.status(404).json({ error: "Kommentar nicht gefunden" });
+    const result = await updateData((data) => {
+      const index = data.comments.findIndex(
+        ({ _id }) => _id === req.params.id,
+      );
+      if (index === -1) return "not-found";
+      if (data.comments[index].userId !== userId && !isAdmin) {
+        return "forbidden";
+      }
+
+      data.comments.splice(index, 1);
+      return "deleted";
+    });
+
+    if (result === "not-found") {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+    if (result === "forbidden") {
+      return res.status(403).json({ error: "Permission denied" });
     }
 
-    // Nur eigene Kommentare löschen
-    if (comment.userId !== userId) {
-      return res.status(403).json({ error: "Keine Berechtigung" });
-    }
-
-    await comment.deleteOne();
-    res.json({ message: "Kommentar gelöscht" });
+    res.json({ message: "Comment deleted" });
   } catch (error) {
-    res.status(400).json({ error: "Fehler beim Löschen" });
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Failed to delete comment" });
   }
 };

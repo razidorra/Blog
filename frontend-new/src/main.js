@@ -1,8 +1,10 @@
 import { Clerk } from "@clerk/clerk-js";
+import "./style.css";
 
 // ─── Konfiguration ────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const APP_URL = new URL(import.meta.env.BASE_URL, window.location.origin).href;
 
 if (!publishableKey) {
   throw new Error("VITE_CLERK_PUBLISHABLE_KEY Missing in the .env File!");
@@ -10,6 +12,12 @@ if (!publishableKey) {
 
 let currentPostId = null;
 let currentUser = null;
+let currentUserIsAdmin = false;
+let postsById = new Map();
+let communityVideosById = new Map();
+let raajiVideosById = new Map();
+let editingCommunityVideoId = null;
+let editingRaajiVideoId = null;
 
 // ─── Clerk initialisieren ─────────────────────────────────────
 const clerk = new Clerk(publishableKey);
@@ -18,17 +26,24 @@ window.addEventListener("load", async () => {
   try {
     await clerk.load();
     window.Clerk = clerk;
-    updateAuthUI();
-    clerk.addListener(() => updateAuthUI());
+    await updateAuthUI();
+    clerk.addListener(async () => {
+      await updateAuthUI();
+      loadPosts();
+      loadVideos();
+      loadRaajiVideos();
+    });
   } catch (err) {
-    console.error("Clerk Fehler:", err);
-    showToast("Authentication Service is not Available!", "warning");
+    console.error("Clerk error:", err);
+    showToast("The authentication service is unavailable.", "warning");
   }
   loadPosts();
+  loadVideos();
+  loadRaajiVideos();
 });
 
 // ─── Auth UI aktualisieren ────────────────────────────────────
-function updateAuthUI() {
+async function updateAuthUI() {
   const user = clerk.user;
   const authButtons = document.getElementById("auth-buttons");
   const userInfo = document.getElementById("user-info");
@@ -37,20 +52,25 @@ function updateAuthUI() {
 
   if (user) {
     currentUser = user;
+    currentUserIsAdmin = await loadAdminStatus();
     const name =
-      user.firstName || user.emailAddresses?.[0]?.emailAddress || "Benutzer";
+      user.firstName || user.emailAddresses?.[0]?.emailAddress || "User";
     userName.textContent = `👤 ${name}`;
     authButtons.classList.add("hidden");
     userInfo.classList.remove("hidden");
     userInfo.classList.add("flex");
     loginHint?.classList.add("hidden");
 
-    // Admin Button nur für Admin zeigen
-    if (user.id === "user_3CyZiJOM2Wxwo4ZG667yKuCyyXB") {
-      document.getElementById("admin-nav-btn")?.classList.remove("hidden");
-    } else {
-      document.getElementById("admin-nav-btn")?.classList.add("hidden");
-    }
+    document.getElementById("admin-nav-btn")?.classList.remove("hidden");
+    document.getElementById("video-login-required")?.classList.add("hidden");
+    document.getElementById("video-form-container")?.classList.remove("hidden");
+
+    document
+      .getElementById("raaji-video-form-container")
+      ?.classList.toggle("hidden", !currentUserIsAdmin);
+    document
+      .getElementById("raaji-upload-note")
+      ?.classList.toggle("hidden", currentUserIsAdmin);
 
     document.getElementById("comment-login-required")?.classList.add("hidden");
     document
@@ -58,15 +78,38 @@ function updateAuthUI() {
       ?.classList.remove("hidden");
   } else {
     currentUser = null;
+    currentUserIsAdmin = false;
     authButtons.classList.remove("hidden");
     userInfo.classList.add("hidden");
     userInfo.classList.remove("flex");
     loginHint?.classList.remove("hidden");
     document.getElementById("admin-nav-btn")?.classList.add("hidden");
+    document.getElementById("video-login-required")?.classList.remove("hidden");
+    document.getElementById("video-form-container")?.classList.add("hidden");
+    document
+      .getElementById("raaji-video-form-container")
+      ?.classList.add("hidden");
+    document.getElementById("raaji-upload-note")?.classList.remove("hidden");
     document
       .getElementById("comment-login-required")
       ?.classList.remove("hidden");
     document.getElementById("comment-form-container")?.classList.add("hidden");
+  }
+}
+
+async function loadAdminStatus() {
+  const token = await getToken();
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${API_URL}/session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return false;
+    const session = await res.json();
+    return session.isAdmin === true;
+  } catch {
+    return false;
   }
 }
 
@@ -82,13 +125,13 @@ async function getToken() {
 // ─── Clerk Auth Funktionen ────────────────────────────────────
 window.openSignIn = () => {
   clerk.redirectToSignIn({
-    afterSignInUrl: "http://localhost:5173",
+    redirectUrl: APP_URL,
   });
 };
 
 window.openSignUp = () => {
   clerk.redirectToSignUp({
-    afterSignUpUrl: "http://localhost:5173",
+    redirectUrl: APP_URL,
   });
 };
 
@@ -147,9 +190,9 @@ async function loadPosts() {
 
 function renderPosts(posts) {
   const container = document.getElementById("posts-list");
+  postsById = new Map(posts.map((post) => [post._id, post]));
   if (!posts.length) {
-    container.innerHTML = `<div class="alert alert-info"><span>No posts available yet.
-.</span></div>`;
+    container.innerHTML = `<div class="alert alert-info"><span>No posts available yet.</span></div>`;
     return;
   }
   container.innerHTML = posts
@@ -165,12 +208,12 @@ function renderPosts(posts) {
             ✍️ ${escapeHtml(post.author || "Admin")} · ${formatDate(post.createdAt)}
           </span>
           <div class="flex gap-2">
-            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openPost('${post._id}')">Lesen →</button>
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openPost('${post._id}')">Read →</button>
             ${
               currentUser &&
-              currentUser.id === "user_3CyZiJOM2Wxwo4ZG667yKuCyyXB"
+              (post.userId === currentUser.id || currentUserIsAdmin)
                 ? `
-              <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); editPost('${post._id}', \`${escapeHtml(post.title)}\`, \`${escapeHtml(post.content)}\`)">✏️</button>
+              <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); editPost('${post._id}')">✏️</button>
               <button class="btn btn-error btn-sm" onclick="event.stopPropagation(); deletePost('${post._id}')">🗑️</button>
             `
                 : ""
@@ -208,7 +251,7 @@ window.openPost = async (postId) => {
     document.getElementById("detail-content").classList.remove("hidden");
   } catch {
     document.getElementById("detail-loading").innerHTML = `
-      <div class="alert alert-error"><span>Post Could not be Loaded.</span></div>`;
+      <div class="alert alert-error"><span>The post could not be loaded.</span></div>`;
   }
 
   updateAuthUI();
@@ -229,8 +272,7 @@ async function loadComments(postId) {
     document.getElementById("comment-count").textContent = comments.length;
     renderComments(comments);
   } catch {
-    container.innerHTML = `<div class="alert alert-error"><span>Comments could not be loaded.
-.</span></div>`;
+    container.innerHTML = `<div class="alert alert-error"><span>Comments could not be loaded.</span></div>`;
   }
 }
 
@@ -240,8 +282,7 @@ function renderComments(comments) {
     container.innerHTML = `
       <div class="text-center text-base-content/40 py-10">
         <div class="text-4xl mb-2">💬</div>
-        <p>No comments yet. Be the first one.
-!</p>
+        <p>No comments yet. Be the first!</p>
       </div>`;
     return;
   }
@@ -296,20 +337,15 @@ window.submitComment = async () => {
   }
 
   if (!currentUser) {
-    showToast("Please Signin!", "warning");
+    showToast("Please sign in!", "warning");
     return;
   }
 
   const token = await getToken();
   if (!token) {
-    showToast("Please login again", "error");
+    showToast("Please log in again.", "error");
     return;
   }
-
-  const username =
-    currentUser.firstName ||
-    currentUser.emailAddresses?.[0]?.emailAddress ||
-    "Anonym";
 
   btn.disabled = true;
   btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Sending...`;
@@ -321,12 +357,12 @@ window.submitComment = async () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ text, username }),
+      body: JSON.stringify({ text }),
     });
 
     const data = await res.json();
     if (!res.ok) {
-      errorMsg.textContent = data.error || "Error while Sending";
+      errorMsg.textContent = data.error || "The comment could not be sent.";
       errorDiv.classList.remove("hidden");
       textEl.classList.add("textarea-error");
       return;
@@ -334,10 +370,10 @@ window.submitComment = async () => {
 
     textEl.value = "";
     document.getElementById("char-count").textContent = "0";
-    showToast("Comment Saved! 🎉", "success");
+    showToast("Comment saved! 🎉", "success");
     loadComments(currentPostId);
   } catch {
-    showToast("NetworkError, is the Backend running?", "error");
+    showToast("Network error. Is the backend running?", "error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = "Send Comment";
@@ -346,10 +382,10 @@ window.submitComment = async () => {
 
 // ─── Kommentar löschen ────────────────────────────────────────
 window.deleteComment = async (commentId) => {
-  if (!confirm("Do you really want to Delete the Comment?")) return;
+  if (!confirm("Do you really want to delete this comment?")) return;
   const token = await getToken();
   if (!token) {
-    showToast("Not Athorized", "error");
+    showToast("Not authorized.", "error");
     return;
   }
 
@@ -359,22 +395,24 @@ window.deleteComment = async (commentId) => {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
-      showToast("Comment Deleted", "success");
+      showToast("Comment deleted.", "success");
       loadComments(currentPostId);
     } else {
       const data = await res.json();
-      showToast(data.error || "Error While Deleting", "error");
+      showToast(data.error || "The comment could not be deleted.", "error");
     }
   } catch {
-    showToast("NetworkError", "error");
+    showToast("Network error.", "error");
   }
 };
 
 // ─── Post erstellen ───────────────────────────────────────────
 window.createPost = async () => {
   const titleEl = document.getElementById("post-title");
+  const authorEl = document.getElementById("post-author");
   const contentEl = document.getElementById("post-content");
   const title = titleEl.value.trim();
+  const author = authorEl.value.trim();
   const content = contentEl.value.trim();
   const btn = document.getElementById("create-post-btn");
 
@@ -386,14 +424,14 @@ window.createPost = async () => {
 
   if (!title) {
     document.getElementById("post-title-error-msg").textContent =
-      "Titel cannot be Empty!";
+      "The title cannot be empty!";
     document.getElementById("post-title-error").classList.remove("hidden");
     titleEl.classList.add("input-error");
     return;
   }
   if (!content) {
     document.getElementById("post-content-error-msg").textContent =
-      "Conent cannot be Empty!";
+      "The content cannot be empty!";
     document.getElementById("post-content-error").classList.remove("hidden");
     contentEl.classList.add("textarea-error");
     return;
@@ -401,12 +439,12 @@ window.createPost = async () => {
 
   const token = await getToken();
   if (!token) {
-    showToast("Please Signin!", "error");
+    showToast("Please sign in!", "error");
     return;
   }
 
   btn.disabled = true;
-  btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Wird erstellt...`;
+  btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Creating...`;
 
   try {
     const res = await fetch(`${API_URL}/posts`, {
@@ -415,7 +453,7 @@ window.createPost = async () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ title, content }),
+      body: JSON.stringify({ title, author, content }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -424,13 +462,14 @@ window.createPost = async () => {
     }
 
     titleEl.value = "";
+    authorEl.value = "";
     contentEl.value = "";
     document.getElementById("post-success").classList.remove("hidden");
-    showToast("Post successfully Created! 🎉", "success");
+    showToast("Post created successfully! 🎉", "success");
     setTimeout(() => window.showPage("home"), 2000);
     loadPosts();
   } catch {
-    showToast("NetworkError!", "error");
+    showToast("Network error!", "error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = "🚀 Publish Post";
@@ -439,10 +478,10 @@ window.createPost = async () => {
 
 // ─── Post löschen ─────────────────────────────────────────────
 window.deletePost = async (postId) => {
-  if (!confirm("Do You really want to Delete the Post")) return;
+  if (!confirm("Do you really want to delete this post?")) return;
   const token = await getToken();
   if (!token) {
-    showToast("Not Authorized!", "error");
+    showToast("Not authorized!", "error");
     return;
   }
 
@@ -452,42 +491,50 @@ window.deletePost = async (postId) => {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
-      showToast("Post Deleted! ✅", "success");
+      showToast("Post deleted! ✅", "success");
       loadPosts();
     } else {
       const data = await res.json();
-      showToast(data.error || "Error while Deleting", "error");
+      showToast(data.error || "The post could not be deleted.", "error");
     }
   } catch {
-    showToast("NetworkError", "error");
+    showToast("Network error.", "error");
   }
 };
 
 // ─── Post bearbeiten ──────────────────────────────────────────
-window.editPost = (postId, title, content) => {
+window.editPost = (postId) => {
+  const post = postsById.get(postId);
+  if (!post) {
+    showToast("The post could not be found.", "error");
+    return;
+  }
+
   window.showPage("admin");
-  document.getElementById("post-title").value = title;
-  document.getElementById("post-content").value = content;
+  document.getElementById("post-title").value = post.title;
+  document.getElementById("post-author").value = post.author || "";
+  document.getElementById("post-content").value = post.content;
 
   const btn = document.getElementById("create-post-btn");
   btn.innerHTML = "✏️ Save Changes";
   btn.onclick = async () => {
     const newTitle = document.getElementById("post-title").value.trim();
+    const newAuthor = document.getElementById("post-author").value.trim();
     const newContent = document.getElementById("post-content").value.trim();
 
     if (!newTitle || !newContent) {
-      showToast("Titel and Contentcannot be Empty!", "error");
+      showToast("The title and content cannot be empty!", "error");
       return;
     }
 
     const token = await getToken();
     if (!token) {
-      showToast("Please Signin!", "error");
+      showToast("Please sign in!", "error");
       return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Being Saved...`;
+    btn.innerHTML = `<span class="loading loading-spinner loading-sm"></span> Saving...`;
 
     try {
       const res = await fetch(`${API_URL}/posts/${postId}`, {
@@ -496,7 +543,11 @@ window.editPost = (postId, title, content) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: newTitle, content: newContent }),
+        body: JSON.stringify({
+          title: newTitle,
+          author: newAuthor,
+          content: newContent,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -504,16 +555,407 @@ window.editPost = (postId, title, content) => {
         return;
       }
 
-      showToast("Post Updated! ✅", "success");
+      showToast("Post updated! ✅", "success");
       loadPosts();
       setTimeout(() => window.showPage("home"), 1500);
     } catch {
-      showToast("NetworkError!", "error");
+      showToast("Network error!", "error");
     } finally {
       btn.disabled = false;
       btn.innerHTML = "✏️ Save Changes";
     }
   };
+};
+
+// ─── Raaji Baluch videos ──────────────────────────────────────
+async function loadRaajiVideos() {
+  const container = document.getElementById("raaji-videos-list");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_URL}/raaji-videos`);
+    if (!res.ok) throw new Error();
+    const videos = await res.json();
+    renderRaajiVideos(videos);
+  } catch {
+    container.innerHTML = `
+      <div class="col-span-full alert alert-error">
+        <span>Raaji videos could not be loaded.</span>
+      </div>`;
+  }
+}
+
+function renderRaajiVideos(videos) {
+  const container = document.getElementById("raaji-videos-list");
+  raajiVideosById = new Map(videos.map((video) => [video._id, video]));
+
+  if (!videos.length) {
+    container.innerHTML = `
+      <div class="col-span-full card bg-base-200 shadow-xl">
+        <div class="card-body items-center text-center py-16">
+          <div class="text-6xl mb-3">🎬</div>
+          <h2 class="card-title text-2xl">No Raaji videos yet</h2>
+          <p class="text-base-content/60">Raaji Baluch's official videos will appear here.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = videos
+    .map(
+      (video) => `
+        <article class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h3 class="card-title text-lg">🎥 ${escapeHtml(video.title)}</h3>
+            <p class="text-base-content/60 text-sm">${escapeHtml(video.description)}</p>
+            <iframe
+              width="100%"
+              height="220"
+              src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}"
+              title="Raaji Baluch video"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              class="rounded-xl"
+            ></iframe>
+            <span class="text-xs text-base-content/50 mt-2">
+              By ${escapeHtml(video.username || "Raaji Baluch")}
+            </span>
+            ${
+              currentUserIsAdmin
+                ? `<div class="card-actions justify-end mt-2">
+                    <button class="btn btn-ghost btn-xs text-info" onclick="editRaajiVideo('${video._id}')">✏️ Edit</button>
+                    <button class="btn btn-ghost btn-xs text-error" onclick="deleteRaajiVideo('${video._id}')">🗑️ Delete</button>
+                  </div>`
+                : ""
+            }
+          </div>
+        </article>`,
+    )
+    .join("");
+}
+
+window.editRaajiVideo = (videoId) => {
+  const video = raajiVideosById.get(videoId);
+  if (!video || !currentUserIsAdmin) {
+    showToast("The Raaji video could not be edited.", "error");
+    return;
+  }
+
+  editingRaajiVideoId = videoId;
+  document.getElementById("raaji-video-title").value = video.title;
+  document.getElementById("raaji-video-author").value = video.username || "";
+  document.getElementById("raaji-video-url").value = video.url;
+  document.getElementById("raaji-video-description").value =
+    video.description || "";
+  document.getElementById("publish-raaji-video-btn").textContent =
+    "💾 Save Changes";
+  document
+    .getElementById("cancel-raaji-video-edit-btn")
+    .classList.remove("hidden");
+  document.getElementById("raaji-video-form-container").scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+};
+
+window.cancelRaajiVideoEdit = () => {
+  editingRaajiVideoId = null;
+  document.getElementById("raaji-video-title").value = "";
+  document.getElementById("raaji-video-author").value = "";
+  document.getElementById("raaji-video-url").value = "";
+  document.getElementById("raaji-video-description").value = "";
+  document.getElementById("publish-raaji-video-btn").textContent =
+    "🚀 Publish Raaji Video";
+  document
+    .getElementById("cancel-raaji-video-edit-btn")
+    .classList.add("hidden");
+};
+
+window.publishRaajiVideo = async () => {
+  const titleElement = document.getElementById("raaji-video-title");
+  const authorElement = document.getElementById("raaji-video-author");
+  const urlElement = document.getElementById("raaji-video-url");
+  const descriptionElement = document.getElementById(
+    "raaji-video-description",
+  );
+  const button = document.getElementById("publish-raaji-video-btn");
+  const title = titleElement.value.trim();
+  const author = authorElement.value.trim();
+  const url = urlElement.value.trim();
+  const description = descriptionElement.value.trim();
+  const editingId = editingRaajiVideoId;
+
+  if (!title || !url) {
+    showToast("Enter a video title and YouTube URL.", "warning");
+    return;
+  }
+
+  const token = await getToken();
+  if (!token) {
+    showToast("Please sign in as Raaji Baluch.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.innerHTML = `<span class="loading loading-spinner loading-sm"></span> ${editingId ? "Saving..." : "Publishing..."}`;
+
+  try {
+    const endpoint = editingId
+      ? `${API_URL}/raaji-videos/${editingId}`
+      : `${API_URL}/raaji-videos`;
+    const res = await fetch(endpoint, {
+      method: editingId ? "PUT" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title, author, url, description }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || "The video could not be saved.", "error");
+      return;
+    }
+
+    showToast(
+      editingId ? "Raaji video updated! ✅" : "Raaji video published! 🎉",
+      "success",
+    );
+    window.cancelRaajiVideoEdit();
+    loadRaajiVideos();
+  } catch {
+    showToast("Network error. Is the backend running?", "error");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = editingRaajiVideoId
+      ? "💾 Save Changes"
+      : "🚀 Publish Raaji Video";
+  }
+};
+
+window.deleteRaajiVideo = async (videoId) => {
+  if (!confirm("Do you really want to delete this Raaji video?")) return;
+
+  const token = await getToken();
+  if (!token) {
+    showToast("Not authorized!", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/raaji-videos/${videoId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || "The video could not be deleted.", "error");
+      return;
+    }
+
+    showToast("Raaji video deleted!", "success");
+    loadRaajiVideos();
+  } catch {
+    showToast("Network error.", "error");
+  }
+};
+
+// ─── Community videos ─────────────────────────────────────────
+async function loadVideos() {
+  const container = document.getElementById("videos-list");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_URL}/videos`);
+    if (!res.ok) throw new Error();
+    const videos = await res.json();
+    renderVideos(videos);
+  } catch {
+    container.innerHTML = `
+      <div class="col-span-full alert alert-error">
+        <span>Videos could not be loaded. Is the backend running?</span>
+      </div>`;
+  }
+}
+
+function renderVideos(videos) {
+  const container = document.getElementById("videos-list");
+  communityVideosById = new Map(videos.map((video) => [video._id, video]));
+
+  if (!videos.length) {
+    container.innerHTML = `
+      <div class="col-span-full alert alert-info">
+        <span>No videos have been published yet.</span>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = videos
+    .map((video) => {
+      const canManage =
+        currentUser &&
+        (video.userId === currentUser.id || currentUserIsAdmin);
+
+      return `
+        <article class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h3 class="card-title text-lg">🎬 ${escapeHtml(video.title)}</h3>
+            <p class="text-base-content/60 text-sm">${escapeHtml(video.description)}</p>
+            <iframe
+              width="100%"
+              height="220"
+              src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}"
+              title="Community video"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              class="rounded-xl"
+            ></iframe>
+            <div class="flex items-center justify-between gap-3 mt-2">
+              <span class="text-xs text-base-content/50">
+                Shared by ${escapeHtml(video.username || "Community Member")}
+              </span>
+              ${
+                canManage
+                  ? `<span class="flex gap-1">
+                      <button class="btn btn-ghost btn-xs text-info" onclick="editVideo('${video._id}')">✏️ Edit</button>
+                      <button class="btn btn-ghost btn-xs text-error" onclick="deleteVideo('${video._id}')">🗑️ Delete</button>
+                    </span>`
+                  : ""
+              }
+            </div>
+          </div>
+        </article>`;
+    })
+    .join("");
+}
+
+window.editVideo = (videoId) => {
+  const video = communityVideosById.get(videoId);
+  const canManage =
+    video &&
+    currentUser &&
+    (video.userId === currentUser.id || currentUserIsAdmin);
+
+  if (!canManage) {
+    showToast("The video could not be edited.", "error");
+    return;
+  }
+
+  editingCommunityVideoId = videoId;
+  document.getElementById("video-title").value = video.title;
+  document.getElementById("video-author").value = video.username || "";
+  document.getElementById("video-url").value = video.url;
+  document.getElementById("video-description").value =
+    video.description || "";
+  document.getElementById("publish-video-btn").textContent = "💾 Save Changes";
+  document.getElementById("cancel-video-edit-btn").classList.remove("hidden");
+  document.getElementById("video-form-container").scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+};
+
+window.cancelVideoEdit = () => {
+  editingCommunityVideoId = null;
+  document.getElementById("video-title").value = "";
+  document.getElementById("video-author").value = "";
+  document.getElementById("video-url").value = "";
+  document.getElementById("video-description").value = "";
+  document.getElementById("publish-video-btn").textContent = "🚀 Publish Video";
+  document.getElementById("cancel-video-edit-btn").classList.add("hidden");
+};
+
+window.publishVideo = async () => {
+  const titleElement = document.getElementById("video-title");
+  const authorElement = document.getElementById("video-author");
+  const urlElement = document.getElementById("video-url");
+  const descriptionElement = document.getElementById("video-description");
+  const button = document.getElementById("publish-video-btn");
+  const title = titleElement.value.trim();
+  const author = authorElement.value.trim();
+  const url = urlElement.value.trim();
+  const description = descriptionElement.value.trim();
+  const editingId = editingCommunityVideoId;
+
+  if (!title || !url) {
+    showToast("Enter a video title and YouTube URL.", "warning");
+    return;
+  }
+
+  const token = await getToken();
+  if (!token || !currentUser) {
+    showToast("Please sign in to publish a video.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.innerHTML = `<span class="loading loading-spinner loading-sm"></span> ${editingId ? "Saving..." : "Publishing..."}`;
+
+  try {
+    const endpoint = editingId
+      ? `${API_URL}/videos/${editingId}`
+      : `${API_URL}/videos`;
+    const res = await fetch(endpoint, {
+      method: editingId ? "PUT" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title, author, url, description }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || "The video could not be saved.", "error");
+      return;
+    }
+
+    showToast(
+      editingId ? "Video updated! ✅" : "Video published! 🎉",
+      "success",
+    );
+    window.cancelVideoEdit();
+    loadVideos();
+  } catch {
+    showToast("Network error. Is the backend running?", "error");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = editingCommunityVideoId
+      ? "💾 Save Changes"
+      : "🚀 Publish Video";
+  }
+};
+
+window.deleteVideo = async (videoId) => {
+  if (!confirm("Do you really want to delete this video?")) return;
+
+  const token = await getToken();
+  if (!token) {
+    showToast("Not authorized!", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/videos/${videoId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || "The video could not be deleted.", "error");
+      return;
+    }
+
+    showToast("Video deleted!", "success");
+    loadVideos();
+  } catch {
+    showToast("Network error.", "error");
+  }
 };
 
 // ─── Zeichenzähler ────────────────────────────────────────────
@@ -559,7 +1001,7 @@ function escapeHtml(str) {
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("de-DE", {
+  return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",

@@ -1,0 +1,94 @@
+{
+  "posts": [
+    {
+      "_id": "baluchistan-history",
+      "title": "Baluchistan – One People, Divided by Force",
+      "content": "The Baloch are a people with thousands of years of history, culture, and identity. Through violence and colonial decisions, Baluchistan was divided into three parts: the largest part under Pakistan, another part under Iran, and another under Afghanistan. The Baloch share a language, a culture, and an identity, regardless of the borders imposed upon them. Their struggle for recognition and rights continues to this day.",
+      "author": "Admin",
+      "createdAt": "2026-07-21T00:00:00.000Z",
+      "updatedAt": "2026-07-21T00:00:00.000Z"
+    },
+    {
+      "_id": "baluchistan-culture",
+      "title": "Baloch Culture and Music",
+      "content": "Baloch culture is rich in traditions, music, and art. The sorud, a traditional musical instrument, and the lewa dance are symbols of Baloch identity. The handmade carpets and embroidery created by Baloch women are known around the world. Hospitality, called 'Mehman-Nawazi' in Balochi, is one of the highest values in Baloch society.",
+      "author": "Admin",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
+    {
+      "_id": "baluchistan-nature",
+      "title": "The Nature and Beauty of Baluchistan",
+      "content": "From the Makran Coast and its turquoise waters in the south to the snow-covered mountains in the north, Baluchistan offers an incredible variety of natural landscapes. The Hamoun lakes in Iranian Baluchistan, the Dasht desert, and Hingol National Park in Pakistan are among the region's most impressive sights. Unfortunately, much of this beauty remains little known to the wider world.",
+      "author": "Admin",
+      "createdAt": "2026-07-19T00:00:00.000Z",
+      "updatedAt": "2026-07-19T00:00:00.000Z"
+    }
+  ],
+  "comments": [],
+  "videos": [
+    {
+      "_id": "baluchi-video-1",
+      "title": "Baluchi Music Video 1",
+      "description": "Traditional Baloch performance",
+      "youtubeId": "ekTqLE3kfU8",
+      "url": "https://www.youtube.com/watch?v=ekTqLE3kfU8",
+      "username": "Admin",
+      "createdAt": "2026-07-21T00:00:00.000Z",
+      "updatedAt": "2026-07-21T00:00:00.000Z"
+    },
+    {
+      "_id": "baluchi-video-2",
+      "title": "Baluchi Music Video 2",
+      "description": "Folk songs from the region",
+      "youtubeId": "NgOrL8MvC7k",
+      "url": "https://www.youtube.com/watch?v=NgOrL8MvC7k",
+      "username": "Admin",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
+    {
+      "_id": "baluchi-video-3",
+      "title": "Baluchi Music Video 3",
+      "description": "Beautiful sounds of Baluchistan",
+      "youtubeId": "N8Pbqk3_Yfo",
+      "url": "https://www.youtube.com/watch?v=N8Pbqk3_Yfo",
+      "username": "Admin",
+      "createdAt": "2026-07-19T00:00:00.000Z",
+      "updatedAt": "2026-07-19T00:00:00.000Z"
+    },
+    {
+      "_id": "baluchi-video-4",
+      "title": "Baluchi Music Video 4",
+      "description": "The heart of Baloch culture",
+      "youtubeId": "-GnH7v42I1M",
+      "url": "https://www.youtube.com/watch?v=-GnH7v42I1M",
+      "username": "Admin",
+      "createdAt": "2026-07-18T00:00:00.000Z",
+      "updatedAt": "2026-07-18T00:00:00.000Z"
+    },
+    {
+      "_id": "9c193d4d-1c5b-41c1-91d2-43dc9bcea779",
+      "title": "My Speech",
+      "description": "I delivered a speech in Hamburg-Germany at a protest organized by the Al-Ahwazi community. In my speech, I spoke about the situation of the Baloch people and the Arab people, highlighting the challenges they face and calling for greater awareness and support for their rights.",
+      "youtubeId": "jKKMbbYal7U",
+      "url": "https://www.youtube.com/watch?v=jKKMbbYal7U&list=PL9_KFczA_F60eSgGmwMSymXkb5aXe4uOM",
+      "userId": "user_3CiSmhZRAg7AAIZAYS7FK4VVOWd",
+      "username": "Razieh",
+      "createdAt": "2026-07-21T10:26:18.367Z",
+      "updatedAt": "2026-07-21T10:26:18.367Z"
+    },
+    {
+      "_id": "921f331b-2282-472c-96c0-d8e59705d7fc",
+      "title": "My interview With (قناة ٩)",
+      "description": "I spoke here about the situation in Iran, the brutality that followed the death of Hassan Nasrallah, and my interview with Channel 9, an Arabic-language TV channel.",
+      "youtubeId": "HBUogAIt-oQ",
+      "url": "https://www.youtube.com/watch?v=HBUogAIt-oQ",
+      "userId": "user_3CiSmhZRAg7AAIZAYS7FK4VVOWd",
+      "username": "Community Member",
+      "createdAt": "2026-07-21T10:40:07.773Z",
+      "updatedAt": "2026-07-21T10:40:07.773Z"
+    }
+  ],
+  "raajiVideos": []
+}

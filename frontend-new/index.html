@@ -4,25 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Raaji Baluch</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      .page {
-        display: none;
-      }
-      .page.active {
-        display: block;
-      }
-      .comment-card {
-        transition: transform 0.2s ease;
-      }
-      .comment-card:hover {
-        transform: translateX(4px);
-      }
-    </style>
   </head>
   <body class="min-h-screen bg-base-100 text-base-content">
     <!-- NAVBAR -->
@@ -37,17 +18,20 @@
       </div>
       <div class="navbar-center hidden md:flex gap-2">
         <a class="btn btn-ghost btn-sm" onclick="showPage('home')"
-          >🏠 Homepage</a
+          >🏠 Home</a
         >
         <a class="btn btn-ghost btn-sm" onclick="showPage('music')">🎵 Music</a>
+        <a class="btn btn-ghost btn-sm" onclick="showPage('raaji-videos')"
+          >🎥 Raaji Videos</a
+        >
         <a class="btn btn-ghost btn-sm" onclick="showPage('video')"
-          >🎬 Videos</a
+          >🎬 Community Videos</a
         >
         <a
           id="admin-nav-btn"
           class="hidden btn btn-ghost btn-sm"
           onclick="showPage('admin')"
-          >✏️ Creat a Post</a
+          >✏️ Create a Post</a
         >
       </div>
       <div class="navbar-end gap-2">
@@ -56,17 +40,17 @@
         </button>
         <div id="auth-buttons" class="flex gap-2">
           <button class="btn btn-ghost btn-sm" onclick="openSignIn()">
-            Login
+            Log in
           </button>
           <button class="btn btn-primary btn-sm" onclick="openSignUp()">
-            Signup
+            Sign up
           </button>
         </div>
         <div id="user-info" class="hidden items-center gap-3">
           <span id="user-name" class="text-sm text-base-content/70"></span>
 
           <button class="btn btn-ghost btn-sm" onclick="signOut()">
-            Logout
+            Log out
           </button>
         </div>
       </div>
@@ -114,7 +98,7 @@
               </button>
               <button
                 class="btn btn-outline text-white border-white hover:bg-white hover:text-black"
-                onclick="showPage('video')"
+                onclick="showPage('raaji-videos')"
               >
                 🎬 Watch Videos
               </button>
@@ -126,9 +110,9 @@
           <span
             >👉
             <a class="link link-primary cursor-pointer" onclick="openSignIn()"
-              >SignIn
+              >Sign in
             </a>
-            to Write comments!</span
+            to write comments!</span
           >
         </div>
 
@@ -193,7 +177,7 @@
           >
             <div class="form-control mb-4">
               <label class="label">
-                <span class="label-text font-medium">Your Comments</span>
+                <span class="label-text font-medium">Your Comment</span>
                 <span class="label-text-alt"
                   ><span id="char-count">0</span>/1000</span
                 >
@@ -201,7 +185,7 @@
               <textarea
                 id="comment-text"
                 class="textarea textarea-bordered h-28 resize-none"
-                placeholder="Write Your Comment..."
+                placeholder="Write your comment..."
                 maxlength="1000"
               ></textarea>
               <div id="comment-error" class="hidden label">
@@ -236,7 +220,7 @@
       <div class="container mx-auto px-4 py-10 max-w-4xl">
         <h1 class="text-4xl font-bold text-primary mb-2">🎵 Baluchi Music</h1>
         <p class="text-base-content/60 mb-8">
-          Traditional and Modern Musics from Baluchistan
+          Traditional and modern music from Baluchistan
         </p>
         <div class="grid gap-6">
           <div class="card bg-base-200 shadow-xl">
@@ -330,7 +314,7 @@
                 <div>
                   <h3 class="card-title">Baluchi Song 5</h3>
                   <p class="text-base-content/60 text-sm">
-                    the Heart of Baluchi Music
+                    The heart of Baluchi music
                   </p>
                 </div>
               </div>
@@ -348,79 +332,173 @@
       </div>
     </div>
 
-    <!-- SEITE: VIDEOS -->
+    <!-- RAAJI BALUCH VIDEOS -->
+    <div id="page-raaji-videos" class="page">
+      <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <div class="text-center mb-10">
+          <div class="badge badge-primary mb-3">Official Collection</div>
+          <h1 class="text-4xl font-bold text-primary mb-3">
+            🎥 Raaji Baluch Videos
+          </h1>
+          <p class="text-base-content/60 max-w-2xl mx-auto">
+            A dedicated collection of videos selected by Raaji Baluch.
+          </p>
+        </div>
+
+        <div id="raaji-upload-note" class="alert alert-info mb-8">
+          <span>Only Raaji Baluch can publish videos in this collection.</span>
+        </div>
+
+        <div
+          id="raaji-video-form-container"
+          class="hidden card bg-base-200 shadow-xl mb-10"
+        >
+          <div class="card-body">
+            <h2 class="card-title">🎥 Publish a Raaji Video</h2>
+            <label class="form-control">
+              <span class="label-text mb-2">Video Title</span>
+              <input
+                id="raaji-video-title"
+                class="input input-bordered"
+                maxlength="200"
+                placeholder="Enter the video title..."
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">Author / Artist (optional)</span>
+              <input
+                id="raaji-video-author"
+                class="input input-bordered"
+                maxlength="80"
+                placeholder="Raaji Baluch"
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">YouTube URL</span>
+              <input
+                id="raaji-video-url"
+                type="url"
+                class="input input-bordered"
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">Description (optional)</span>
+              <textarea
+                id="raaji-video-description"
+                class="textarea textarea-bordered"
+                maxlength="500"
+                placeholder="Describe the video..."
+              ></textarea>
+            </label>
+            <div class="card-actions justify-end mt-2">
+              <button
+                id="cancel-raaji-video-edit-btn"
+                class="hidden btn btn-ghost"
+                onclick="cancelRaajiVideoEdit()"
+              >
+                Cancel Edit
+              </button>
+              <button
+                id="publish-raaji-video-btn"
+                class="btn btn-primary"
+                onclick="publishRaajiVideo()"
+              >
+                🚀 Publish Raaji Video
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="raaji-videos-list" class="grid md:grid-cols-2 gap-6">
+          <div class="col-span-full flex justify-center py-10">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMUNITY VIDEOS -->
     <div id="page-video" class="page">
       <div class="container mx-auto px-4 py-10 max-w-4xl">
         <h1 class="text-4xl font-bold text-primary mb-2">
-          🎬 Baluchistan Videos
+          🎬 Community Videos
         </h1>
         <p class="text-base-content/60 mb-8">
-          Documentaries and videos about Baluchistan
+          Videos about Baluchistan shared by community members
         </p>
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="card bg-base-200 shadow-xl">
-            <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 1</h3>
-              <p class="text-base-content/60 text-sm mb-3">
-                Traditional Baluch performance
-              </p>
-              <iframe
-                width="100%"
-                height="200"
-                src="https://www.youtube.com/embed/ekTqLE3kfU8"
-                frameborder="0"
-                allowfullscreen
-                class="rounded-xl"
-              ></iframe>
+        <div id="video-login-required" class="alert alert-info mb-8">
+          <span>
+            👉 <a class="link font-bold cursor-pointer" onclick="openSignIn()">Sign in</a>
+            to publish a YouTube video.
+          </span>
+        </div>
+        <div
+          id="video-form-container"
+          class="hidden card bg-base-200 shadow-xl mb-10"
+        >
+          <div class="card-body">
+            <h2 class="card-title">📹 Publish a Video</h2>
+            <p class="text-sm text-base-content/60">
+              Paste a YouTube video, Shorts, or share URL.
+            </p>
+            <label class="form-control">
+              <span class="label-text mb-2">Video Title</span>
+              <input
+                id="video-title"
+                class="input input-bordered"
+                maxlength="200"
+                placeholder="Enter a video title..."
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">Author / Artist (optional)</span>
+              <input
+                id="video-author"
+                class="input input-bordered"
+                maxlength="80"
+                placeholder="Enter the creator's name..."
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">YouTube URL</span>
+              <input
+                id="video-url"
+                type="url"
+                class="input input-bordered"
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-2">Description (optional)</span>
+              <textarea
+                id="video-description"
+                class="textarea textarea-bordered"
+                maxlength="500"
+                placeholder="Describe the video..."
+              ></textarea>
+            </label>
+            <div class="card-actions justify-end mt-2">
+              <button
+                id="cancel-video-edit-btn"
+                class="hidden btn btn-ghost"
+                onclick="cancelVideoEdit()"
+              >
+                Cancel Edit
+              </button>
+              <button
+                id="publish-video-btn"
+                class="btn btn-primary"
+                onclick="publishVideo()"
+              >
+                🚀 Publish Video
+              </button>
             </div>
           </div>
-          <div class="card bg-base-200 shadow-xl">
-            <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 2</h3>
-              <p class="text-base-content/60 text-sm mb-3">
-                Folk songs from the region
-              </p>
-              <iframe
-                width="100%"
-                height="200"
-                src="https://www.youtube.com/embed/NgOrL8MvC7k"
-                frameborder="0"
-                allowfullscreen
-                class="rounded-xl"
-              ></iframe>
-            </div>
-          </div>
-          <div class="card bg-base-200 shadow-xl">
-            <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 3</h3>
-              <p class="text-base-content/60 text-sm mb-3">
-                Beautiful sounds of Baluchistan
-              </p>
-              <iframe
-                width="100%"
-                height="200"
-                src="https://www.youtube.com/embed/N8Pbqk3_Yfo"
-                frameborder="0"
-                allowfullscreen
-                class="rounded-xl"
-              ></iframe>
-            </div>
-          </div>
-          <div class="card bg-base-200 shadow-xl">
-            <div class="card-body">
-              <h3 class="card-title text-lg">🎵 Baluchi Musicvideo 4</h3>
-              <p class="text-base-content/60 text-sm mb-3">
-                The heart of Baluch culture
-              </p>
-              <iframe
-                width="100%"
-                height="200"
-                src="https://www.youtube.com/embed/-GnH7v42I1M"
-                frameborder="0"
-                allowfullscreen
-                class="rounded-xl"
-              ></iframe>
-            </div>
+        </div>
+        <div id="videos-list" class="grid md:grid-cols-2 gap-6">
+          <div class="col-span-full flex justify-center py-10">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
           </div>
         </div>
       </div>
@@ -454,7 +532,7 @@
           ></div>
           <div class="relative z-10 text-center">
             <h1 class="text-4xl font-bold text-white mb-2">
-              ✏️ Creat a new Post
+              ✏️ Create a New Post
             </h1>
             <p class="text-white/70">Share your knowledge about Baluchistan.</p>
           </div>
@@ -463,13 +541,13 @@
           <div class="card-body">
             <div class="form-control mb-4">
               <label class="label"
-                ><span class="label-text font-medium">Titel</span></label
+                ><span class="label-text font-medium">Title</span></label
               >
               <input
                 id="post-title"
                 type="text"
                 class="input input-bordered"
-                placeholder="Titel des Beitrags..."
+                placeholder="Enter the post title..."
                 maxlength="200"
               />
               <div id="post-title-error" class="hidden label">
@@ -481,12 +559,24 @@
             </div>
             <div class="form-control mb-4">
               <label class="label"
+                ><span class="label-text font-medium">Author (optional)</span></label
+              >
+              <input
+                id="post-author"
+                type="text"
+                class="input input-bordered"
+                placeholder="Enter the author's name..."
+                maxlength="80"
+              />
+            </div>
+            <div class="form-control mb-4">
+              <label class="label"
                 ><span class="label-text font-medium">Content</span></label
               >
               <textarea
                 id="post-content"
                 class="textarea textarea-bordered h-40 resize-none"
-                placeholder="Write the Content..."
+                placeholder="Write the post content..."
               ></textarea>
               <div id="post-content-error" class="hidden label">
                 <span
@@ -500,14 +590,14 @@
             </div>
             <div class="flex gap-3">
               <button class="btn btn-ghost" onclick="showPage('home')">
-                ← Close
+                ← Cancel
               </button>
               <button
                 id="create-post-btn"
                 class="btn btn-primary flex-1"
                 onclick="createPost()"
               >
-                🚀 Publish post
+                🚀 Publish Post
               </button>
             </div>
           </div>

@@ -1,135 +1,191 @@
-import Post from "./post.model.js";
+import { randomUUID } from "node:crypto";
+import { readData, updateData } from "../../data/store.js";
+import { getIdentity, resolveByline } from "../../utils/identity.js";
+import { asTrimmedString } from "../../utils/validation.js";
 
-// Alle Blogbeiträge abrufen
+const canManagePost = (post, userId) =>
+  post.userId === userId || userId === process.env.ADMIN_USER_ID;
+
 export const getAllPosts = async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
+    const { posts } = await readData();
+    posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json(posts);
   } catch (error) {
-    res.status(500).json({ error: "Fehler beim Laden der Beiträge" });
+    console.error("Error reading posts:", error);
+    res.status(500).json({ error: "Failed to load posts" });
   }
 };
 
-// Einzelnen Blogbeitrag abrufen
 export const getPostById = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const { posts } = await readData();
+    const post = posts.find(({ _id }) => _id === req.params.id);
+
     if (!post) {
-      return res.status(404).json({ error: "Beitrag nicht gefunden" });
+      return res.status(404).json({ error: "Post not found" });
     }
+
     res.json(post);
   } catch (error) {
-    res.status(400).json({ error: "Ungültige Beitrag-ID" });
+    console.error("Error reading post:", error);
+    res.status(500).json({ error: "Failed to load post" });
   }
 };
 
-// Neuen Blogbeitrag erstellen – nur Admin!
 export const createPost = async (req, res) => {
   try {
-    const { userId } = getAuth(req);
-    if (userId !== process.env.ADMIN_USER_ID) {
-      return res.status(403).json({
-        error: "Keine Berechtigung – nur Admin darf Posts erstellen!",
-      });
+    const identity = getIdentity(req);
+    const { userId } = identity;
+    const { byline, error: bylineError } = resolveByline(
+      identity,
+      req.body.author,
+    );
+    const title = asTrimmedString(req.body.title);
+    const content = asTrimmedString(req.body.content);
+
+    if (bylineError) {
+      return res.status(400).json({ error: bylineError });
     }
 
-    const title = req.body.title?.trim();
-    const content = req.body.content?.trim();
-
-    if (!title)
-      return res.status(400).json({ error: "Titel ist erforderlich" });
-    if (!content)
-      return res.status(400).json({ error: "Inhalt ist erforderlich" });
-    if (title.length < 3)
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+    if (!content) {
+      return res.status(400).json({ error: "Content is required" });
+    }
+    if (title.length < 3) {
       return res
         .status(400)
-        .json({ error: "Titel muss mindestens 3 Zeichen lang sein" });
-    if (content.length < 10)
+        .json({ error: "Title must contain at least 3 characters" });
+    }
+    if (title.length > 200) {
       return res
         .status(400)
-        .json({ error: "Inhalt muss mindestens 10 Zeichen lang sein" });
+        .json({ error: "Title cannot exceed 200 characters" });
+    }
+    if (content.length < 10) {
+      return res
+        .status(400)
+        .json({ error: "Content must contain at least 10 characters" });
+    }
+    if (content.length > 20_000) {
+      return res
+        .status(400)
+        .json({ error: "Content cannot exceed 20,000 characters" });
+    }
 
-    const post = await Post.create({ title, content, author: "Admin", userId });
+    const now = new Date().toISOString();
+    const post = {
+      _id: randomUUID(),
+      title,
+      content,
+      author: byline,
+      userId,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await updateData((data) => {
+      data.posts.push(post);
+    });
+
     res.status(201).json(post);
   } catch (error) {
-    res.status(500).json({ error: "Fehler beim Erstellen des Beitrags" });
+    console.error("Error creating post:", error);
+    res.status(500).json({ error: "Failed to create post" });
   }
 };
 
-// Post löschen – nur Admin!
 export const deletePost = async (req, res) => {
   try {
-    const { userId } = getAuth(req);
-    if (userId !== process.env.ADMIN_USER_ID) {
+    const { userId } = getIdentity(req);
+
+    const result = await updateData((data) => {
+      const index = data.posts.findIndex(({ _id }) => _id === req.params.id);
+      if (index === -1) return "not-found";
+      if (!canManagePost(data.posts[index], userId)) return "forbidden";
+
+      data.posts.splice(index, 1);
+      data.comments = data.comments.filter(
+        ({ postId }) => postId !== req.params.id,
+      );
+      return "deleted";
+    });
+
+    if (result === "not-found") {
+      return res.status(404).json({ error: "Post not found" });
+    }
+    if (result === "forbidden") {
       return res
         .status(403)
-        .json({ error: "Keine Berechtigung – nur Admin darf Posts löschen!" });
+        .json({ error: "You can only delete your own posts" });
     }
 
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ error: "Beitrag nicht gefunden" });
-
-    await post.deleteOne();
-    res.json({ message: "Beitrag gelöscht" });
+    res.json({ message: "Post deleted" });
   } catch (error) {
-    res.status(400).json({ error: "Fehler beim Löschen" });
+    console.error("Error deleting post:", error);
+    res.status(500).json({ error: "Failed to delete post" });
   }
 };
 
-// Post bearbeiten – nur Admin!
 export const updatePost = async (req, res) => {
   try {
-    const { userId } = getAuth(req);
-    if (userId !== process.env.ADMIN_USER_ID) {
-      return res.status(403).json({
-        error: "Keine Berechtigung – nur Admin darf Posts bearbeiten!",
-      });
+    const identity = getIdentity(req);
+    const { userId } = identity;
+    const { byline, error: bylineError } = resolveByline(
+      identity,
+      req.body.author,
+    );
+    const title = asTrimmedString(req.body.title);
+    const content = asTrimmedString(req.body.content);
+
+    if (bylineError) {
+      return res.status(400).json({ error: bylineError });
     }
 
-    const title = req.body.title?.trim();
-    const content = req.body.content?.trim();
+    if (!title || !content) {
+      return res
+        .status(400)
+        .json({ error: "Title and content are required" });
+    }
+    if (
+      title.length < 3 ||
+      title.length > 200 ||
+      content.length < 10 ||
+      content.length > 20_000
+    ) {
+      return res.status(400).json({ error: "Title or content is invalid" });
+    }
 
-    if (!title)
-      return res.status(400).json({ error: "Titel ist erforderlich" });
-    if (!content)
-      return res.status(400).json({ error: "Inhalt ist erforderlich" });
+    const result = await updateData((data) => {
+      const existingPost = data.posts.find(
+        ({ _id }) => _id === req.params.id,
+      );
+      if (!existingPost) return { status: "not-found" };
+      if (!canManagePost(existingPost, userId)) {
+        return { status: "forbidden" };
+      }
 
-    const post = await Post.findByIdAndUpdate(
-      req.params.id,
-      { title, content },
-      { new: true },
-    );
+      existingPost.title = title;
+      existingPost.content = content;
+      existingPost.author = byline;
+      existingPost.updatedAt = new Date().toISOString();
+      return { status: "updated", post: existingPost };
+    });
 
-    if (!post) return res.status(404).json({ error: "Beitrag nicht gefunden" });
-    res.json(post);
+    if (result.status === "not-found") {
+      return res.status(404).json({ error: "Post not found" });
+    }
+    if (result.status === "forbidden") {
+      return res
+        .status(403)
+        .json({ error: "You can only edit your own posts" });
+    }
+
+    res.json(result.post);
   } catch (error) {
-    res.status(400).json({ error: "Fehler beim Bearbeiten" });
-  }
-};
-
-export const seedPosts = async () => {
-  const count = await Post.countDocuments();
-  if (count === 0) {
-    await Post.insertMany([
-      {
-        title: "Baluchistan – Ein Volk, durch Gewalt geteilt",
-        content:
-          "Baluchistan ist ein Volk mit Jahrtausenden von Geschichte, Kultur und Identität. Durch Gewalt und koloniale Entscheidungen wurde es auf drei Teile aufgeteilt: der größte Teil unter Pakistan, ein Teil unter Iran und ein Teil unter Afghanistan. Die Baluchen teilen eine Sprache, eine Kultur und eine Identität – unabhängig von den Grenzen die ihnen aufgezwungen wurden. Der Kampf um Anerkennung und Rechte des baluchischen Volkes dauert bis heute an.",
-        author: "Admin",
-      },
-      {
-        title: "Die Kultur und Musik der Baluchen",
-        content:
-          "Die baluchische Kultur ist reich an Traditionen, Musik und Kunst. Der Sorud, ein traditionelles Musikinstrument, und der Lewa-Tanz sind Symbole der baluchischen Identität. Die handgefertigten Teppiche und Stickereien der baluchischen Frauen sind weltweit bekannt. Gastfreundschaft – auf Baluchi 'Mehman-Nawazi' – ist einer der höchsten Werte in der baluchischen Gesellschaft.",
-        author: "Admin",
-      },
-      {
-        title: "Die Natur und Schönheit Baluchistan",
-        content:
-          "Von der Makran-Küste mit türkisfarbenem Wasser im Süden bis zu den schneebedeckten Bergen im Norden bietet Baluchistan eine unglaubliche Naturvielfalt. Die Hamoun-Seen im iranischen Baluchistan, die Wüste Dasht und der Hingol-Nationalpark in Pakistan gehören zu den beeindruckendsten Landschaften der Region. Diese Schönheit ist leider noch zu wenig von der Welt entdeckt.",
-        author: "Admin",
-      },
-    ]);
-    console.log("✅ Baluchistan-Blogbeiträge eingefügt");
+    console.error("Error editing post:", error);
+    res.status(500).json({ error: "Failed to edit post" });
   }
 };
